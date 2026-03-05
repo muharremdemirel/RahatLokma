@@ -1,184 +1,168 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Utensils, Clock, AlertTriangle, Activity } from 'lucide-react-native';
-import { useActionSheet } from '@expo/react-native-action-sheet';
-import { useRefluxStore } from '../store/useRefluxStore';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { RefluxEntry } from '../types';
+import moment from 'moment';
+import { useRefluxStore } from '../store/useRefluxStore'; // Store'u ekledik
 
 interface Props {
   entry: RefluxEntry;
   onEdit: (entry: RefluxEntry) => void;
 }
 
-const RefluxEntryCard: React.FC<Props> = ({ entry, onEdit }) => {
-  const { showActionSheetWithOptions } = useActionSheet();
-  const deleteEntry = useRefluxStore(state => state.deleteEntry);
+const RefluxEntryCard = ({ entry, onEdit }: Props) => {
+  const { deleteEntry } = useRefluxStore(); // Silme fonksiyonunu çekiyoruz
 
-  const timeString = new Date(entry.timestamp).toLocaleTimeString('tr-TR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  const getSeverityColor = (val: number) => {
-    if (val <= 2) return '#27AE60';
-    if (val <= 4) return '#F39C12';
-    return '#E74C3C';
+  const getSeverityColor = (severity: number) => {
+    if (severity <= 2) return '#34C759';
+    if (severity === 3) return '#FF9500';
+    return '#FF3B30';
   };
 
-  const onOpenMenu = () => {
-    const options = ['Düzenle', 'Sil', 'Vazgeç'];
-    const destructiveButtonIndex = 1;
-    const cancelButtonIndex = 2;
+  const severityColor = getSeverityColor(entry.severity);
 
-    showActionSheetWithOptions(
-      { options, destructiveButtonIndex, cancelButtonIndex },
-      (selectedIndex?: number) => {
-        if (selectedIndex === 0) {
-          onEdit(entry);
-        } else if (selectedIndex === 1) {
-          Alert.alert('Kaydı Sil', 'Bu kaydı silmek istiyor musun?', [
-            { text: 'Vazgeç', style: 'cancel' },
-            {
-              text: 'Sil',
-              style: 'destructive',
-              onPress: () => deleteEntry(entry.id),
-            },
-          ]);
+  // Silme onayı penceresi
+  const handleDelete = () => {
+    Alert.alert(
+      "Kaydı Sil",
+      "bu öğünü silmek istediğinden emin misin?",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        { 
+          text: "Sil", 
+          style: "destructive", 
+          onPress: () => deleteEntry(entry.id) 
         }
-      },
+      ]
     );
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onLongPress={onOpenMenu}
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={() => onEdit(entry)} 
       activeOpacity={0.7}
     >
-      {/* Yemek ve aat  kısmı*/}
-      <View style={styles.topRow}>
-        <View style={styles.mealInfo}>
-          <Utensils size={18} color="#3498DB" strokeWidth={2.5} />
-          <Text style={styles.mealText} numberOfLines={1}>
+      <View style={styles.headerContent}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.mealText} numberOfLines={1} ellipsizeMode="tail">
             {entry.meal}
           </Text>
+          <Text style={styles.timeText}>{moment(entry.timestamp).format('HH:mm')}</Text>
         </View>
-        <View style={styles.timeInfo}>
-          <Clock size={14} color="#95A5A6" />
-          <Text style={styles.timeText}>{timeString}</Text>
-        </View>
+        
+        {/* SİLME BUTONU - Sağ Üste Eklendi */}
+        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+          <Text style={{ fontSize: 18 }}>d</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Semptom satırı */}
-      {entry.symptoms && entry.symptoms.length > 0 && (
-        <View style={styles.symptomsWrapper}>
-          <Activity size={12} color="#7F8C8D" style={{ marginRight: 4 }} />
-          <View style={styles.symptomsList}>
-            {entry.symptoms.map((s, idx) => (
-              <Text key={idx} style={styles.symptomTag}>
-                {s}
-                {idx < entry.symptoms.length - 1 ? ', ' : ''}
-              </Text>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <View style={styles.bottomRow}>
-        <View
-          style={[
-            styles.severityBadge,
-            { backgroundColor: getSeverityColor(entry.severity) + '15' },
-          ]}
-        >
-          <AlertTriangle size={14} color={getSeverityColor(entry.severity)} />
-          <Text
-            style={[
-              styles.severityText,
-              { color: getSeverityColor(entry.severity) },
-            ]}
+      
+      <View style={styles.symptomsContainer}>
+        {entry.symptoms && entry.symptoms.length > 0 ? (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.symptomsScrollContent}
           >
-            Şiddet: {entry.severity}/5
-          </Text>
-        </View>
+            {entry.symptoms.map((symptom, idx) => (
+              <View key={idx} style={styles.symptomBadge}>
+                <Text style={styles.symptomBadgeText}>{symptom}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.noSymptomText}>Semptom belirtilmedi</Text>
+        )}
+      </View>
+      
+      <View style={styles.footer}>
+        <View style={[styles.severityDot, { backgroundColor: severityColor }]} />
+        <Text style={styles.severityLabel}>Rahatsızlık Seviyesi:</Text>
+        <Text style={styles.severityValue}>{entry.severity}/5</Text>
       </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
+  card: { 
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#EBF0F3',
+    padding: 16, 
+    borderRadius: 16, 
+    marginBottom: 12, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E5EA', 
   },
-  topRow: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  mealInfo: {
-    flexDirection: 'row',
+  mealText: { 
+    fontSize: 17, 
+    fontWeight: '600', 
+    color: '#1C1C1E',
+    letterSpacing: -0.3,
+  },
+  timeText: { 
+    fontSize: 12, 
+    color: '#8E8E93', 
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  deleteButton: {
+    padding: 4,
+    marginLeft: 10,
+  },
+  symptomsContainer: {
+    height: 28, 
+    marginBottom: 12,
+    justifyContent: 'center',
+  },
+  symptomsScrollContent: { 
     alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
   },
-  mealText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#2C3E50',
-    marginLeft: 8,
+  symptomBadge: { 
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 12, 
+    marginRight: 6, 
   },
-  timeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeText: {
-    fontSize: 13,
-    color: '#95A5A6',
-    marginLeft: 4,
+  symptomBadgeText: { 
+    fontSize: 12, 
+    color: '#636366', 
     fontWeight: '500',
   },
-  symptomsWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingLeft: 2,
-  },
-  symptomsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    flex: 1,
-  },
-  symptomTag: {
-    fontSize: 13,
-    color: '#7F8C8D',
+  noSymptomText: {
+    fontSize: 12,
+    color: '#AEAEB2',
     fontStyle: 'italic',
   },
-  bottomRow: {
-    flexDirection: 'row',
+  footer: { 
+    flexDirection: 'row', 
     alignItems: 'center',
   },
-  severityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+  severityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
-  severityText: {
+  severityLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    marginLeft: 6,
+    color: '#8E8E93',
+    marginRight: 4,
+  },
+  severityValue: { 
+    fontSize: 13,
+    fontWeight: '700', 
+    color: '#1C1C1E',
   },
 });
 
