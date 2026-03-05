@@ -1,6 +1,6 @@
 export interface RefluxEntry {
-  id: string; // benzersiz id
-  timestamp: number; // kaydın eklendiği tarih
+  id: string;
+  timestamp: number;
   meal: string; // yenilen yemek
   symptoms: string[]; // semptomlar öksürük, mide yanması vs
   severity: number; // şiddet derecesi
